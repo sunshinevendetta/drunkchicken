@@ -68,7 +68,7 @@ export default function Home() {
         </div>
 
         <p className="eyebrow">★ THE INTERNET&apos;S LEAST SOBER CHICKEN ★</p>
-        <h1 id="hero-title" className="rainbow-title">DRUNKCHICKEN</h1>
+        <h1 id="hero-title" className="hero-title">DRUNKCHICKEN</h1>
         <p className="jp-banner" aria-label="Drunk chicken worldwide">
           酔っぱらいチキン ・ WORLD WIDE WEB ・ 酔っぱらいチキン
         </p>
@@ -180,7 +180,7 @@ export default function Home() {
 
       <section className="final-cta" aria-label="Visit DRUNKCHICKEN on Pons Family">
         <p>YOU HAVE REACHED THE BOTTOM OF THE INTERNET.</p>
-        <h2 className="rainbow-cta">STILL THIRSTY?</h2>
+        <h2 className="cta-title">STILL THIRSTY?</h2>
         <StarBorder
           href={PONS_URL}
           target="_blank"

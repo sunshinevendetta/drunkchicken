@@ -22,7 +22,7 @@ export default function StarBorder({
   };
 
   const starStyle: CSSProperties = {
-    background: `radial-gradient(circle, ${color}, transparent 10%)`,
+    background: `linear-gradient(90deg, transparent, ${color} 50%, transparent)`,
     animationDuration: speed,
   };
 
