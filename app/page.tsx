@@ -69,13 +69,16 @@ export default function Home() {
 
         <p className="eyebrow">★ THE INTERNET&apos;S LEAST SOBER CHICKEN ★</p>
         <h1 id="hero-title" className="hero-title">DRUNKCHICKEN</h1>
-        <p className="jp-banner" aria-label="Drunk chicken worldwide">
-          酔っぱらいチキン ・ WORLD WIDE WEB ・ 酔っぱらいチキン
+        <p className="language-banner" aria-label="Drunk chicken worldwide in Japanese and Chinese">
+          <span lang="ja">酔っぱらいチキン</span> ・ <span lang="zh-CN">醉鸡</span> ・ WORLD
+          WIDE WEB ・ <span lang="zh-CN">醉鸡</span> ・ <span lang="ja">酔っぱらいチキン</span>
         </p>
         <div className="brainrot-ribbon" aria-label="Anime chicken shrine warning">
           <span aria-hidden="true">(˶˃ ᵕ ˂˶) .ᐟ.ᐟ</span>
           <strong>WELCOME 2 MY CHICKEN SHRINE</strong>
-          <span aria-hidden="true">☆*:・ﾟ にわとり最高</span>
+          <span aria-hidden="true">
+            ☆*:・ﾟ <i lang="ja">にわとり最高</i> / <i lang="zh-CN">醉鸡最强</i>
+          </span>
         </div>
 
         <div className="hero-stage">
@@ -154,7 +157,10 @@ export default function Home() {
           <div>
             <small>THE LEGEND OF</small>
             <h2 id="lore-title">THE WASTED ROOSTER</h2>
-            <p>酔っても、まだ鳴く。 // EVEN DRUNK, IT STILL CLUCKS.</p>
+            <p>
+              <span lang="ja">酔っても、まだ鳴く。</span>{" // "}
+              <span lang="zh-CN">就算喝醉了，也还会咯咯叫。</span>{" // "}EVEN DRUNK, IT STILL CLUCKS.
+            </p>
           </div>
           <span aria-hidden="true">✨</span>
         </div>
@@ -195,6 +201,10 @@ export default function Home() {
 
       <footer>
         <p>© 1994–FOREVER DRUNKCHICKEN WORLD WIDE WEB HEADQUARTERS</p>
+        <p className="footer-language">
+          <span lang="ja">酔っぱらいチキン世界網本部</span>{" // "}
+          <span lang="zh-CN">醉鸡万维网总部</span>
+        </p>
         <p>MEME TOKEN. NOT FINANCIAL ADVICE. DON&apos;T DRINK AND TRADE.</p>
         <div className="visitor-counter" aria-label="Fake visitor counter">
           VISITOR # 000🍺420

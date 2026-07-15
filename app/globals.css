@@ -161,7 +161,7 @@ h1 {
   filter: drop-shadow(7px 7px 0 var(--pink));
 }
 
-.jp-banner {
+.language-banner {
   width: fit-content;
   max-width: 100%;
   margin: 16px auto 26px;
@@ -172,6 +172,10 @@ h1 {
   box-shadow: 5px 5px 0 var(--pink);
   font: 900 clamp(0.62rem, 2vw, 0.88rem)/1.15 "Courier New", monospace;
   transform: rotate(0.6deg);
+}
+
+.language-banner span {
+  white-space: nowrap;
 }
 
 .brainrot-ribbon {
@@ -193,6 +197,10 @@ h1 {
 .brainrot-ribbon strong {
   color: #f000b8;
   text-decoration: underline wavy #00a9be 2px;
+}
+
+.brainrot-ribbon i {
+  font-style: normal;
 }
 
 .hero-stage {
@@ -810,6 +818,11 @@ footer {
 
 footer p {
   margin: 4px 0;
+}
+
+.footer-language {
+  color: var(--cyan);
+  font-family: "MS Gothic", "SimSun", "Courier New", monospace;
 }
 
 .visitor-counter {

@@ -195,7 +195,8 @@ export default function SwapWidget() {
   return (
     <section id="swap" className="swap-zone" aria-labelledby="swap-title">
       <div className="swap-anime-rail" aria-hidden="true">
-        ✦ にわとり交換所 ✦ BUY THE BIRD ✦ ૮₍˶• . • ⑅₎ა ✦ にわとり交換所 ✦
+        ✦ <span lang="ja">にわとり交換所</span> ✦ <span lang="zh-CN">小鸡交换所</span> ✦ BUY
+        THE BIRD ✦ ૮₍˶• . • ⑅₎ა ✦ <span lang="zh-CN">立即换鸡</span> ✦
       </div>
       <div className="swap-window">
         <div className="swap-titlebar">
