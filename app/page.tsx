@@ -101,6 +101,11 @@ export default function Home() {
                 height={1152}
                 priority
               />
+              <div className="infomercial-bug" aria-label="Drunkmaxxer, maxx profits">
+                <small>★ BUT WAIT! ★</small>
+                <strong>DRUNKMAXXER</strong>
+                <span>MAXX PROFITS*</span>
+              </div>
             </PixelCard>
             <p className="photo-caption">
               <span aria-hidden="true">📸</span> OFFICIAL MEME — DO NOT FEED AFTER 2AM
@@ -108,10 +113,10 @@ export default function Home() {
           </div>
 
           <aside className="as-seen-badge" aria-label="As seen on Pons Family">
-            <span>AS SEEN ON</span>
+            <span>BUT WAIT! AS SEEN ON</span>
             <strong>PONS</strong>
             <em>FAMILY</em>
-            <small>📺 probably live!!!</small>
+            <small>📺 CALL NOW!!!</small>
           </aside>
         </div>
 
