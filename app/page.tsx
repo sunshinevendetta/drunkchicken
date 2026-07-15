@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import GlitchText from "./components/react-bits/GlitchText";
-import PixelCard from "./components/react-bits/PixelCard";
+import StarBorder from "./components/react-bits/StarBorder";
+import SwapWidget from "./components/SwapWidget";
 
 const CONTRACT_ADDRESS = "0xc7cA3Cade27bbD9514389C0427870770E49bfe7F";
 const PONS_URL =
@@ -47,6 +47,7 @@ export default function Home() {
         </a>
         <nav aria-label="Primary navigation">
           <a href="#contract">CA</a>
+          <a href="#swap">SWAP</a>
           <a href="#lore">WHY?</a>
           <a href={PONS_URL} target="_blank" rel="noreferrer">
             PONS ↗
@@ -67,14 +68,15 @@ export default function Home() {
         </div>
 
         <p className="eyebrow">★ THE INTERNET&apos;S LEAST SOBER CHICKEN ★</p>
-        <h1 id="hero-title">
-          <GlitchText speed={0.55} enableOnHover={false} className="hero-glitch">
-            DRUNKCHICKEN
-          </GlitchText>
-        </h1>
+        <h1 id="hero-title" className="rainbow-title">DRUNKCHICKEN</h1>
         <p className="jp-banner" aria-label="Drunk chicken worldwide">
           酔っぱらいチキン ・ WORLD WIDE WEB ・ 酔っぱらいチキン
         </p>
+        <div className="brainrot-ribbon" aria-label="Anime chicken shrine warning">
+          <span aria-hidden="true">(˶˃ ᵕ ˂˶) .ᐟ.ᐟ</span>
+          <strong>WELCOME 2 MY CHICKEN SHRINE</strong>
+          <span aria-hidden="true">☆*:・ﾟ にわとり最高</span>
+        </div>
 
         <div className="hero-stage">
           <aside className="hero-note note-left">
@@ -87,12 +89,7 @@ export default function Home() {
 
           <div className="meme-stack">
             <span className="new-badge">NEW!</span>
-            <PixelCard
-              className="hero-pixel-card"
-              colors="#ffe600,#ff35d3,#00f0ff"
-              gap={7}
-              speed={42}
-            >
+            <div className="geocities-photo-frame">
               <Image
                 className="official-meme"
                 src="/drunkchicken.jpg"
@@ -106,7 +103,7 @@ export default function Home() {
                 <strong>DRUNKMAXXER</strong>
                 <span>MAXX PROFITS*</span>
               </div>
-            </PixelCard>
+            </div>
             <p className="photo-caption">
               <span aria-hidden="true">📸</span> OFFICIAL MEME — DO NOT FEED AFTER 2AM
             </p>
@@ -149,6 +146,8 @@ export default function Home() {
         </div>
       </section>
 
+      <SwapWidget />
+
       <section id="lore" className="lore-zone" aria-labelledby="lore-title">
         <div className="anime-banner">
           <span aria-hidden="true">✨</span>
@@ -174,19 +173,24 @@ export default function Home() {
           <article className="ugly-card card-cyan">
             <span className="card-icon" aria-hidden="true">📡</span>
             <h3>THE SIGNAL</h3>
-            <p>Broadcasting live from the Pons Family launchpad to every broken monitor.</p>
+            <p>Broadcasting live from the Pons Family launchpad to every cursed guestbook.</p>
           </article>
         </div>
       </section>
 
       <section className="final-cta" aria-label="Visit DRUNKCHICKEN on Pons Family">
         <p>YOU HAVE REACHED THE BOTTOM OF THE INTERNET.</p>
-        <GlitchText speed={0.8} enableOnHover className="cta-glitch">
-          STILL THIRSTY?
-        </GlitchText>
-        <a href={PONS_URL} target="_blank" rel="noreferrer">
+        <h2 className="rainbow-cta">STILL THIRSTY?</h2>
+        <StarBorder
+          href={PONS_URL}
+          target="_blank"
+          rel="noreferrer"
+          color="#ffff00"
+          speed="4s"
+          className="geocities-star-button"
+        >
           🐔 ENTER PONS FAMILY 🐔
-        </a>
+        </StarBorder>
       </section>
 
       <footer>

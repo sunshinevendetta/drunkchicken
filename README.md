@@ -1,6 +1,6 @@
 # DRUNKCHICKEN
 
-The official intentionally ugly, glitchy, late-night-infomercial website for
+The official intentionally ugly GeoCities-meets-anime-brainrot website for
 `$DRUNKCHICKEN` on Pons Family.
 
 ## Stack
@@ -8,8 +8,8 @@ The official intentionally ugly, glitchy, late-night-infomercial website for
 - Next.js
 - React
 - TypeScript
-- React Bits `GlitchText` and `PixelCard` elements, adapted to the site
-- Vinext / Vite
+- React Bits `StarBorder`, adapted to the site
+- viem for the direct Robinhood Chain swap
 
 ## Local development
 
@@ -19,6 +19,10 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+The swap widget connects to an injected EVM wallet, switches it to Robinhood
+Chain, fetches a live pool quote, and submits the ETH-to-DRUNKCHICKEN swap
+directly from the page. The site never receives private keys.
 
 ## Production build
 
