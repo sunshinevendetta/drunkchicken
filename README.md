@@ -9,7 +9,8 @@ The official intentionally ugly GeoCities-meets-anime-brainrot website for
 - React
 - TypeScript
 - React Bits `StarBorder`, adapted to the site
-- viem for the direct Robinhood Chain swap
+- viem for direct Robinhood Chain swaps
+- WalletConnect / Reown for QR-based wallet sessions
 
 ## Local development
 
@@ -20,9 +21,35 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The swap widget connects to an injected EVM wallet, switches it to Robinhood
-Chain, fetches a live pool quote, and submits the ETH-to-DRUNKCHICKEN swap
+The swap widget connects through an injected EVM wallet or WalletConnect,
+requests Robinhood Chain, fetches a live pool quote, and submits the swap
 directly from the page. The site never receives private keys.
+
+Supported routes:
+
+- ETH → DRUNKCHICKEN
+- WETH → DRUNKCHICKEN
+- DRUNKCHICKEN → WETH
+- DRUNKCHICKEN → ETH, with WETH unwrapped atomically by the router
+
+ERC-20 routes request an allowance only when the current allowance is too low.
+
+### WalletConnect
+
+The public Reown project ID is included for this site. Add each production
+domain to its Reown allowlist. To override the ID locally, copy the example
+environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+```text
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=232b6e583a98af526e6f82c6432a80c3
+```
+
+Restart `npm run dev` after changing `.env.local`. The WalletConnect provider is
+loaded only in the browser when the QR button is clicked.
 
 ## Production build
 

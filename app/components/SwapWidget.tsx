@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createPublicClient,
   createWalletClient,
   custom,
   defineChain,
+  encodeFunctionData,
   formatUnits,
   http,
   parseAbi,
   parseEther,
+  zeroAddress,
   type Address,
   type EIP1193Provider,
 } from "viem";
@@ -25,13 +27,33 @@ const WETH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73" as Address;
 const SWAP_ROUTER = "0xCaf681a66D020601342297493863E78C959E5cb2" as Address;
 const QUOTER = "0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7" as Address;
 const POOL_FEE = 10_000;
+const RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
+const WALLETCONNECT_PROJECT_ID =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim() ||
+  "232b6e583a98af526e6f82c6432a80c3";
+
+type WalletKind = "browser" | "walletconnect";
+type SwapDirection = "buy" | "sell";
+type BuyAsset = "ETH" | "WETH";
+type SellAsset = "ETH" | "WETH";
+
+type WalletConnectProvider = EIP1193Provider & {
+  session?: unknown;
+  connect(options?: {
+    chains?: number[];
+    rpcMap?: Record<number, string>;
+  }): Promise<void>;
+  disconnect(): Promise<void>;
+  on(event: "accountsChanged", listener: (accounts: string[]) => void): void;
+  on(event: "disconnect", listener: () => void): void;
+};
 
 const robinhoodChain = defineChain({
   id: 4663,
   name: "Robinhood Chain",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: {
-    default: { http: ["https://rpc.mainnet.chain.robinhood.com"] },
+    default: { http: [RPC_URL] },
   },
   blockExplorers: {
     default: {
@@ -52,6 +74,13 @@ const quoterAbi = parseAbi([
 
 const routerAbi = parseAbi([
   "function exactInputSingle((address tokenIn,address tokenOut,uint24 fee,address recipient,uint256 amountIn,uint256 amountOutMinimum,uint160 sqrtPriceLimitX96) params) payable returns (uint256 amountOut)",
+  "function unwrapWETH9(uint256 amountMinimum,address recipient) payable",
+  "function multicall(bytes[] data) payable returns (bytes[] results)",
+]);
+
+const erc20Abi = parseAbi([
+  "function allowance(address owner,address spender) view returns (uint256)",
+  "function approve(address spender,uint256 amount) returns (bool)",
 ]);
 
 function shortAddress(address: Address) {
@@ -68,14 +97,25 @@ function readableError(error: unknown) {
 }
 
 export default function SwapWidget() {
+  const activeProviderRef = useRef<EIP1193Provider | null>(null);
+  const walletConnectProviderRef = useRef<WalletConnectProvider | null>(null);
   const [amount, setAmount] = useState("0.01");
+  const [direction, setDirection] = useState<SwapDirection>("buy");
+  const [buyAsset, setBuyAsset] = useState<BuyAsset>("ETH");
+  const [sellAsset, setSellAsset] = useState<SellAsset>("WETH");
   const [quote, setQuote] = useState<bigint | null>(null);
   const [slippageBps, setSlippageBps] = useState(500);
   const [account, setAccount] = useState<Address | null>(null);
+  const [walletKind, setWalletKind] = useState<WalletKind | null>(null);
+  const [walletLoading, setWalletLoading] = useState<WalletKind | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [swapLoading, setSwapLoading] = useState(false);
   const [message, setMessage] = useState("LIVE QUOTE FROM THE VERIFIED DRUNKCHICKEN POOL");
   const [txHash, setTxHash] = useState<Address | null>(null);
+  const tokenIn = direction === "buy" ? WETH : TOKEN;
+  const tokenOut = direction === "buy" ? TOKEN : WETH;
+  const inputAsset = direction === "buy" ? buyAsset : "DRUNKCHICKEN";
+  const outputAsset = direction === "buy" ? "DRUNKCHICKEN" : sellAsset;
 
   useEffect(() => {
     const timer = window.setTimeout(async () => {
@@ -88,15 +128,15 @@ export default function SwapWidget() {
           abi: quoterAbi,
           functionName: "quoteExactInputSingle",
           args: [{
-            tokenIn: WETH,
-            tokenOut: TOKEN,
+            tokenIn,
+            tokenOut,
             amountIn,
             fee: POOL_FEE,
             sqrtPriceLimitX96: 0n,
           }],
         });
         setQuote(result[0]);
-        setMessage("QUOTE READY ☆ WALLET SIGNS DIRECTLY ON ROBINHOOD CHAIN");
+        setMessage(`QUOTE READY ☆ ${inputAsset} → ${outputAsset} ON ROBINHOOD CHAIN`);
       } catch (error) {
         setQuote(null);
         setMessage(readableError(error));
@@ -106,80 +146,245 @@ export default function SwapWidget() {
     }, 400);
 
     return () => window.clearTimeout(timer);
-  }, [amount]);
+  }, [amount, inputAsset, outputAsset, tokenIn, tokenOut]);
 
   const formattedQuote = useMemo(() => {
     if (quote === null) return "—";
     return Number(formatUnits(quote, 18)).toLocaleString(undefined, {
-      maximumFractionDigits: 0,
+      maximumFractionDigits: direction === "buy" ? 0 : 8,
     });
-  }, [quote]);
+  }, [direction, quote]);
 
-  async function connectWallet() {
-    if (!window.ethereum) {
-      throw new Error("No browser wallet found. Install an EVM wallet that supports Robinhood Chain.");
-    }
-
+  function walletClientFor(provider: EIP1193Provider) {
     const walletClient = createWalletClient({
       chain: robinhoodChain,
-      transport: custom(window.ethereum),
+      transport: custom(provider),
     });
-    const [connectedAccount] = await walletClient.requestAddresses();
-    if (!connectedAccount) throw new Error("No wallet account selected.");
-
-    try {
-      await walletClient.switchChain({ id: robinhoodChain.id });
-    } catch {
-      await walletClient.addChain({ chain: robinhoodChain });
-      await walletClient.switchChain({ id: robinhoodChain.id });
-    }
-
-    setAccount(connectedAccount);
-    return { walletClient, connectedAccount };
+    return walletClient;
   }
 
-  async function buyToken() {
+  async function connectBrowserWallet() {
+    try {
+      setWalletLoading("browser");
+      setMessage("LOOKING FOR A BROWSER WALLET…");
+      if (!window.ethereum) {
+        throw new Error(
+          "No browser wallet found. Use WalletConnect QR or install an EVM wallet.",
+        );
+      }
+
+      const walletClient = walletClientFor(window.ethereum);
+      const [connectedAccount] = await walletClient.requestAddresses();
+      if (!connectedAccount) throw new Error("No wallet account selected.");
+
+      try {
+        await walletClient.switchChain({ id: robinhoodChain.id });
+      } catch {
+        await walletClient.addChain({ chain: robinhoodChain });
+        await walletClient.switchChain({ id: robinhoodChain.id });
+      }
+
+      activeProviderRef.current = window.ethereum;
+      setAccount(connectedAccount);
+      setWalletKind("browser");
+      setMessage("BROWSER WALLET CONNECTED ☆ ROBINHOOD CHAIN READY");
+    } catch (error) {
+      setMessage(readableError(error));
+    } finally {
+      setWalletLoading(null);
+    }
+  }
+
+  async function connectWalletConnect() {
+    try {
+      setWalletLoading("walletconnect");
+      setMessage("OPENING WALLETCONNECT QR… MOBILE CHICKENS INCOMING");
+      if (!WALLETCONNECT_PROJECT_ID) {
+        throw new Error(
+          "WalletConnect is not configured. Add NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID to .env.local.",
+        );
+      }
+
+      let provider = walletConnectProviderRef.current;
+      if (!provider) {
+        const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
+        const initializedProvider = await EthereumProvider.init({
+          projectId: WALLETCONNECT_PROJECT_ID,
+          optionalChains: [robinhoodChain.id],
+          showQrModal: true,
+          rpcMap: { [robinhoodChain.id]: RPC_URL },
+          methods: ["eth_sendTransaction", "personal_sign"],
+          events: ["chainChanged", "accountsChanged"],
+          metadata: {
+            name: "DRUNKCHICKEN",
+            description: "Direct DRUNKCHICKEN swap on Robinhood Chain",
+            url: window.location.origin,
+            icons: [new URL("/og.png", window.location.origin).toString()],
+          },
+        });
+
+        provider = initializedProvider as unknown as WalletConnectProvider;
+        provider.on("accountsChanged", (accounts) => {
+          setAccount((accounts[0] as Address | undefined) ?? null);
+        });
+        provider.on("disconnect", () => {
+          activeProviderRef.current = null;
+          walletConnectProviderRef.current = null;
+          setAccount(null);
+          setWalletKind(null);
+          setMessage("WALLETCONNECT DISCONNECTED. THE CHICKEN IS ALONE AGAIN.");
+        });
+        walletConnectProviderRef.current = provider;
+      }
+
+      if (!provider.session) {
+        await provider.connect({
+          chains: [robinhoodChain.id],
+          rpcMap: { [robinhoodChain.id]: RPC_URL },
+        });
+      }
+
+      const walletClient = walletClientFor(provider);
+      const [connectedAccount] = await walletClient.requestAddresses();
+      if (!connectedAccount) throw new Error("No wallet account selected.");
+
+      const connectedChain = await walletClient.getChainId();
+      if (connectedChain !== robinhoodChain.id) {
+        throw new Error("Approve Robinhood Chain in WalletConnect, then try again.");
+      }
+
+      activeProviderRef.current = provider;
+      setAccount(connectedAccount);
+      setWalletKind("walletconnect");
+      setMessage("WALLETCONNECT LINKED ☆ ROBINHOOD CHAIN READY");
+    } catch (error) {
+      setMessage(readableError(error));
+    } finally {
+      setWalletLoading(null);
+    }
+  }
+
+  async function disconnectWallet() {
+    if (walletKind === "walletconnect" && walletConnectProviderRef.current) {
+      await walletConnectProviderRef.current.disconnect().catch(() => undefined);
+      walletConnectProviderRef.current = null;
+    }
+    activeProviderRef.current = null;
+    setAccount(null);
+    setWalletKind(null);
+    setMessage("WALLET FORGOTTEN. CONNECT AGAIN WHEN THE ROOM STOPS SPINNING.");
+  }
+
+  function changeDirection(nextDirection: SwapDirection) {
+    setDirection(nextDirection);
+    setAmount(nextDirection === "buy" ? "0.01" : "1000000");
+    setTxHash(null);
+    setMessage(
+      nextDirection === "buy"
+        ? "BUY MODE… PICK ETH OR WETH AND AIM AT THE CHICKEN"
+        : "SELL MODE… PICK WETH OR UNWRAPPED ETH",
+    );
+  }
+
+  async function executeSwap() {
     try {
       setSwapLoading(true);
       setTxHash(null);
       setMessage("OPENING WALLET… DO NOT FEED THE POP-UP");
       const amountIn = parseEther(amount);
       if (amountIn <= 0n) throw new Error("Enter an ETH amount.");
+      if (!account || !activeProviderRef.current) {
+        throw new Error("Connect a browser wallet or WalletConnect first.");
+      }
 
       const { result: freshQuote } = await publicClient.simulateContract({
         address: QUOTER,
         abi: quoterAbi,
         functionName: "quoteExactInputSingle",
         args: [{
-          tokenIn: WETH,
-          tokenOut: TOKEN,
+            tokenIn,
+            tokenOut,
           amountIn,
           fee: POOL_FEE,
           sqrtPriceLimitX96: 0n,
         }],
       });
       const minimumOut = (freshQuote[0] * BigInt(10_000 - slippageBps)) / 10_000n;
-      const { walletClient, connectedAccount } = await connectWallet();
+      const connectedAccount = account;
+      const walletClient = walletClientFor(activeProviderRef.current);
 
-      setMessage("CONFIRM THE REAL ONCHAIN SWAP IN YOUR WALLET");
-      const { request } = await publicClient.simulateContract({
-        account: connectedAccount,
-        address: SWAP_ROUTER,
-        abi: routerAbi,
-        functionName: "exactInputSingle",
-        args: [{
-          tokenIn: WETH,
-          tokenOut: TOKEN,
-          fee: POOL_FEE,
-          recipient: connectedAccount,
-          amountIn,
-          amountOutMinimum: minimumOut,
-          sqrtPriceLimitX96: 0n,
-        }],
-        value: amountIn,
-      });
+      if (inputAsset !== "ETH") {
+        const allowance = await publicClient.readContract({
+          address: tokenIn,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [connectedAccount, SWAP_ROUTER],
+        });
 
-      const hash = await walletClient.writeContract(request);
+        if (allowance < amountIn) {
+          setMessage(`APPROVE ${inputAsset}… ONE WALLET CONFIRMATION BEFORE THE SWAP`);
+          const { request: approvalRequest } = await publicClient.simulateContract({
+            account: connectedAccount,
+            address: tokenIn,
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [SWAP_ROUTER, amountIn],
+          });
+          const approvalHash = await walletClient.writeContract(approvalRequest);
+          const approvalReceipt = await publicClient.waitForTransactionReceipt({
+            hash: approvalHash,
+          });
+          if (approvalReceipt.status !== "success") {
+            throw new Error(`${inputAsset} approval reverted onchain.`);
+          }
+        }
+      }
+
+      setMessage("CONFIRM THE ONCHAIN SWAP IN YOUR WALLET");
+      const swapParams = {
+        tokenIn,
+        tokenOut,
+        fee: POOL_FEE,
+        recipient: outputAsset === "ETH" ? zeroAddress : connectedAccount,
+        amountIn,
+        amountOutMinimum: minimumOut,
+        sqrtPriceLimitX96: 0n,
+      } as const;
+
+      let hash: Address;
+      if (outputAsset === "ETH") {
+        const calls = [
+          encodeFunctionData({
+            abi: routerAbi,
+            functionName: "exactInputSingle",
+            args: [swapParams],
+          }),
+          encodeFunctionData({
+            abi: routerAbi,
+            functionName: "unwrapWETH9",
+            args: [minimumOut, connectedAccount],
+          }),
+        ];
+        const { request } = await publicClient.simulateContract({
+          account: connectedAccount,
+          address: SWAP_ROUTER,
+          abi: routerAbi,
+          functionName: "multicall",
+          args: [calls],
+        });
+        hash = await walletClient.writeContract(request);
+      } else {
+        const { request } = await publicClient.simulateContract({
+          account: connectedAccount,
+          address: SWAP_ROUTER,
+          abi: routerAbi,
+          functionName: "exactInputSingle",
+          args: [swapParams],
+          value: inputAsset === "ETH" ? amountIn : 0n,
+        });
+        hash = await walletClient.writeContract(request);
+      }
+
       setTxHash(hash);
       setMessage("TRANSACTION SENT… CHICKEN IS CROSSING THE CHAIN");
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -200,35 +405,81 @@ export default function SwapWidget() {
       </div>
       <div className="swap-window">
         <div className="swap-titlebar">
-          <span>🐔 REAL_SWAP.EXE</span>
-          <span>{account ? `CONNECTED: ${shortAddress(account)}` : "WALLET: OFFLINE"}</span>
+          <span>🐔 swap_REAL_final_FINAL2_use_this.exe</span>
+          <span>
+            {account
+              ? `${walletKind === "walletconnect" ? "WC" : "BROWSER"}: ${shortAddress(account)}`
+              : "WALLET: OFFLINE"}
+          </span>
         </div>
         <div className="swap-headline">
           <span className="swap-face" aria-hidden="true">(づ｡◕‿‿◕｡)づ</span>
           <div>
             <p>DIRECT ONCHAIN SWAP</p>
-            <h2 id="swap-title">ETH → DRUNKCHICKEN</h2>
+            <h2 id="swap-title">{inputAsset} → {outputAsset}</h2>
           </div>
           <span className="swap-face" aria-hidden="true">☆ ～(&apos;▽^人)</span>
         </div>
 
         <div className="swap-panel">
-          <label htmlFor="eth-amount">YOU PAY</label>
+          <div className="route-tabs" role="group" aria-label="Swap direction">
+            <button
+              type="button"
+              className={direction === "buy" ? "is-active" : ""}
+              aria-pressed={direction === "buy"}
+              onClick={() => changeDirection("buy")}
+            >
+              BUY CHICKEN
+            </button>
+            <button
+              type="button"
+              className={direction === "sell" ? "is-active" : ""}
+              aria-pressed={direction === "sell"}
+              onClick={() => changeDirection("sell")}
+            >
+              SELL CHICKEN
+            </button>
+          </div>
+          <label htmlFor="swap-amount">YOU PAY</label>
           <div className="swap-input-row">
             <input
-              id="eth-amount"
+              id="swap-amount"
               inputMode="decimal"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               aria-describedby="swap-status"
             />
-            <strong>ETH</strong>
+            {direction === "buy" ? (
+              <select
+                className="asset-select"
+                aria-label="Asset to pay"
+                value={buyAsset}
+                onChange={(event) => setBuyAsset(event.target.value as BuyAsset)}
+              >
+                <option value="ETH">ETH</option>
+                <option value="WETH">WETH</option>
+              </select>
+            ) : (
+              <strong>DRUNKCHICKEN</strong>
+            )}
           </div>
           <div className="swap-arrow" aria-hidden="true">⇩ 🥴 ⇩</div>
           <p className="receive-label">YOU RECEIVE (EST.)</p>
           <div className="swap-output">
             <strong>{quoteLoading ? "CALCULATING…" : formattedQuote}</strong>
-            <span>DRUNKCHICKEN</span>
+            {direction === "sell" ? (
+              <select
+                className="asset-select"
+                aria-label="Asset to receive"
+                value={sellAsset}
+                onChange={(event) => setSellAsset(event.target.value as SellAsset)}
+              >
+                <option value="WETH">WETH</option>
+                <option value="ETH">ETH</option>
+              </select>
+            ) : (
+              <span>DRUNKCHICKEN</span>
+            )}
           </div>
 
           <div className="slippage-row">
@@ -245,8 +496,46 @@ export default function SwapWidget() {
             </select>
           </div>
 
-          <button type="button" onClick={buyToken} disabled={swapLoading || quote === null}>
-            {swapLoading ? "WAIT 4 CHICKEN…" : account ? "SWAP NOW!!!" : "CONNECT + SWAP!!!"}
+          <div className="wallet-options" role="group" aria-label="Choose wallet connection">
+            <button
+              type="button"
+              className={walletKind === "browser" ? "is-active" : ""}
+              aria-pressed={walletKind === "browser"}
+              onClick={connectBrowserWallet}
+              disabled={walletLoading !== null || swapLoading}
+            >
+              {walletLoading === "browser" ? "SEARCHING…" : "🦊 BROWSER WALLET"}
+            </button>
+            <button
+              type="button"
+              className={walletKind === "walletconnect" ? "is-active" : ""}
+              aria-pressed={walletKind === "walletconnect"}
+              onClick={connectWalletConnect}
+              disabled={walletLoading !== null || swapLoading}
+            >
+              {walletLoading === "walletconnect" ? "OPENING QR…" : "📱 WALLETCONNECT QR"}
+            </button>
+          </div>
+
+          {!WALLETCONNECT_PROJECT_ID && (
+            <p className="wallet-config-warning">
+              ADMIN: ADD NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID TO ENABLE QR CONNECTIONS.
+            </p>
+          )}
+
+          {account && (
+            <div className="wallet-connected">
+              <span>CONNECTED VIA {walletKind === "walletconnect" ? "WALLETCONNECT" : "BROWSER"}</span>
+              <button type="button" onClick={disconnectWallet}>DISCONNECT</button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={executeSwap}
+            disabled={swapLoading || quote === null || account === null}
+          >
+            {swapLoading ? "WAIT 4 CHICKEN…" : account ? "SWAP NOW!!!" : "CONNECT A WALLET FIRST"}
           </button>
           <p id="swap-status" className="swap-status" aria-live="polite">{message}</p>
           {txHash && (
@@ -263,7 +552,9 @@ export default function SwapWidget() {
 
         <p className="swap-disclaimer">
           Uses the verified DRUNKCHICKEN / WETH pool and Robinhood Chain contracts. Your wallet
-          signs the transaction; this site never sees private keys. Quotes can move before confirmation.
+          signs the transaction through a browser wallet or WalletConnect; this site never sees
+          private keys. ERC-20 routes may require approval first. ETH output unwraps WETH atomically.
+          Quotes can move before confirmation.
         </p>
       </div>
     </section>

@@ -156,7 +156,7 @@ export default function Home() {
           <span aria-hidden="true">✨</span>
           <div>
             <small>THE LEGEND OF</small>
-            <h2 id="lore-title">THE WASTED ROOSTER</h2>
+            <h2 id="lore-title">THE DRUNKEST CHICKEN</h2>
             <p>
               <span lang="ja">酔っても、まだ鳴く。</span>{" // "}
               <span lang="zh-CN">就算喝醉了，也还会咯咯叫。</span>{" // "}EVEN DRUNK, IT STILL CLUCKS.
@@ -168,17 +168,17 @@ export default function Home() {
         <div className="lore-grid">
           <article className="ugly-card card-yellow">
             <span className="card-icon" aria-hidden="true">🐣</span>
-            <h3>THE PLAN</h3>
+            <h3>THE PLAN???</h3>
             <p>There is no plan. There is a chicken. Please try to keep up.</p>
           </article>
           <article className="ugly-card card-pink">
             <span className="card-icon" aria-hidden="true">🍻</span>
-            <h3>THE VIBE</h3>
+            <h3>THE VIBE_final</h3>
             <p>Late-night cable TV, warm beer, dial-up noises and one heroic bird.</p>
           </article>
           <article className="ugly-card card-cyan">
             <span className="card-icon" aria-hidden="true">📡</span>
-            <h3>THE SIGNAL</h3>
+            <h3>THE SIGNAL_v2</h3>
             <p>Broadcasting live from the Pons Family launchpad to every cursed guestbook.</p>
           </article>
         </div>

@@ -412,6 +412,7 @@ h1 {
   border: 5px outset #eee;
   box-shadow: 13px 13px 0 #000;
   text-align: center;
+  transform: rotate(0.35deg);
 }
 
 .window-titlebar {
@@ -520,6 +521,7 @@ h1 {
   background: #c0c0c0;
   border: 8px outset #fff;
   box-shadow: 16px 16px 0 #000080;
+  transform: rotate(-0.45deg);
 }
 
 .swap-titlebar {
@@ -530,6 +532,7 @@ h1 {
   color: #fff;
   background: #000080;
   font: 700 0.72rem/1 "Courier New", monospace;
+  transform: translate(-5px, -3px) rotate(0.7deg);
 }
 
 .swap-headline {
@@ -553,6 +556,7 @@ h1 {
   font-size: clamp(1.8rem, 7vw, 3.8rem);
   line-height: 0.9;
   text-shadow: 3px 3px 0 var(--acid);
+  transform: rotate(-1.1deg);
 }
 
 .swap-face {
@@ -565,6 +569,39 @@ h1 {
   padding: 20px;
   background: #ffffdf;
   border: 5px inset #fff;
+  transform: rotate(0.3deg);
+}
+
+.route-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  margin: -9px 0 20px;
+}
+
+.route-tabs button {
+  flex: 1;
+  padding: 10px 8px;
+  color: #fff;
+  background: #000080;
+  border: 4px outset #fff;
+  box-shadow: 4px 4px 0 #000;
+  font: 900 0.76rem/1 "Courier New", monospace;
+  cursor: pointer;
+}
+
+.route-tabs button:first-child {
+  transform: rotate(-1.4deg) translateY(2px);
+}
+
+.route-tabs button:last-child {
+  transform: rotate(1.8deg) translateY(-2px);
+}
+
+.route-tabs button.is-active {
+  color: #000;
+  background: var(--acid);
+  outline: 3px solid var(--pink);
 }
 
 .swap-panel > label,
@@ -607,6 +644,15 @@ h1 {
   font: 900 0.75rem/1 "Courier New", monospace;
 }
 
+.asset-select {
+  max-width: 100%;
+  padding: 7px 8px;
+  color: #fff;
+  background: #000080;
+  border: 3px outset #fff;
+  font: 900 0.75rem/1 "Courier New", monospace;
+}
+
 .swap-arrow {
   margin: 8px 0;
   color: #ff3100;
@@ -645,6 +691,84 @@ h1 {
   background: #fff;
   border: 3px outset #fff;
   font: 900 0.78rem/1 "Courier New", monospace;
+}
+
+.wallet-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.wallet-options button {
+  min-height: 48px;
+  padding: 10px 8px;
+  color: #fff;
+  background: #000080;
+  border: 4px outset #fff;
+  box-shadow: 3px 3px 0 #000;
+  font: 900 clamp(0.66rem, 2vw, 0.8rem)/1.15 "Courier New", monospace;
+  cursor: pointer;
+}
+
+.wallet-options button:nth-child(2) {
+  color: #000;
+  background: var(--cyan);
+  transform: rotate(1.2deg) translateY(-2px);
+}
+
+.wallet-options button:first-child {
+  transform: rotate(-1.1deg) translateY(2px);
+}
+
+.wallet-options button.is-active {
+  outline: 4px solid var(--pink);
+  background: var(--acid);
+  color: #000;
+}
+
+.wallet-options button:active:not(:disabled) {
+  border-style: inset;
+  box-shadow: none;
+  transform: translate(3px, 3px);
+}
+
+.wallet-options button:disabled {
+  color: #666;
+  background: #aaa;
+  cursor: wait;
+}
+
+.wallet-config-warning {
+  margin: -5px 0 14px;
+  padding: 7px 9px;
+  color: #000;
+  background: #ffb000;
+  border: 3px dashed #000;
+  font: 900 0.62rem/1.3 "Courier New", monospace;
+  text-align: center;
+}
+
+.wallet-connected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 8px 10px;
+  color: #fff;
+  background: #006400;
+  border: 3px inset #fff;
+  font: 900 0.64rem/1.2 "Courier New", monospace;
+}
+
+.wallet-connected button {
+  padding: 6px 8px;
+  color: #000;
+  background: #fff;
+  border: 3px outset #fff;
+  font: 900 0.62rem/1 "Courier New", monospace;
+  cursor: pointer;
 }
 
 .swap-panel > button {
@@ -941,6 +1065,8 @@ footer p {
   .swap-input-row strong,
   .swap-output span { width: fit-content; }
   .slippage-row { justify-content: space-between; }
+  .wallet-options { grid-template-columns: 1fr; }
+  .wallet-connected { align-items: stretch; flex-direction: column; }
 }
 
 @media (prefers-reduced-motion: reduce) {
