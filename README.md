@@ -33,6 +33,8 @@ Supported routes:
 - DRUNKCHICKEN → ETH, with WETH unwrapped atomically by the router
 
 ERC-20 routes request an allowance only when the current allowance is too low.
+Quote and receipt reads go through the read-only `/api/rpc` proxy, which retries
+temporary upstream failures and keeps RPC credentials out of the browser.
 
 ### WalletConnect
 
@@ -50,6 +52,13 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=232b6e583a98af526e6f82c6432a80c3
 
 Restart `npm run dev` after changing `.env.local`. The WalletConnect provider is
 loaded only in the browser when the QR button is clicked.
+
+### Production RPC
+
+Robinhood's public RPC is rate-limited. Set the server-only
+`ROBINHOOD_RPC_URL` environment variable to a production Robinhood Chain
+endpoint from Alchemy or another provider. Never prefix this value with
+`NEXT_PUBLIC_` because provider API keys must stay on the server.
 
 ## Production build
 

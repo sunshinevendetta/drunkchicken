@@ -27,7 +27,8 @@ const WETH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73" as Address;
 const SWAP_ROUTER = "0xCaf681a66D020601342297493863E78C959E5cb2" as Address;
 const QUOTER = "0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7" as Address;
 const POOL_FEE = 10_000;
-const RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
+const WALLET_RPC_URL = "https://rpc.mainnet.chain.robinhood.com";
+const QUOTE_RPC_URL = "/api/rpc";
 const WALLETCONNECT_PROJECT_ID =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim() ||
   "232b6e583a98af526e6f82c6432a80c3";
@@ -53,7 +54,7 @@ const robinhoodChain = defineChain({
   name: "Robinhood Chain",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: {
-    default: { http: [RPC_URL] },
+    default: { http: [WALLET_RPC_URL] },
   },
   blockExplorers: {
     default: {
@@ -65,7 +66,11 @@ const robinhoodChain = defineChain({
 
 const publicClient = createPublicClient({
   chain: robinhoodChain,
-  transport: http(),
+  transport: http(QUOTE_RPC_URL, {
+    retryCount: 2,
+    retryDelay: 300,
+    timeout: 15_000,
+  }),
 });
 
 const quoterAbi = parseAbi([
@@ -93,6 +98,9 @@ function readableError(error: unknown) {
   if (/rejected|denied/i.test(message)) return "Transaction cancelled in wallet.";
   if (/insufficient funds/i.test(message)) return "Not enough ETH for the swap and gas.";
   if (/slippage|amountoutminimum/i.test(message)) return "Price moved too fast. Refresh the quote and try again.";
+  if (/RPC is busy|rate.?limit|429|HTTP request failed|Failed to fetch/i.test(message)) {
+    return "ROBINHOOD RPC IS BUSY. WAIT A FEW SECONDS, THEN KICK THE QUOTER AGAIN.";
+  }
   return message.split("\n")[0].slice(0, 180);
 }
 
@@ -109,6 +117,7 @@ export default function SwapWidget() {
   const [walletKind, setWalletKind] = useState<WalletKind | null>(null);
   const [walletLoading, setWalletLoading] = useState<WalletKind | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [swapLoading, setSwapLoading] = useState(false);
   const [message, setMessage] = useState("LIVE QUOTE FROM THE VERIFIED DRUNKCHICKEN POOL");
   const [txHash, setTxHash] = useState<Address | null>(null);
@@ -146,7 +155,7 @@ export default function SwapWidget() {
     }, 400);
 
     return () => window.clearTimeout(timer);
-  }, [amount, inputAsset, outputAsset, tokenIn, tokenOut]);
+  }, [amount, inputAsset, outputAsset, quoteAttempt, tokenIn, tokenOut]);
 
   const formattedQuote = useMemo(() => {
     if (quote === null) return "—";
@@ -212,7 +221,7 @@ export default function SwapWidget() {
           projectId: WALLETCONNECT_PROJECT_ID,
           optionalChains: [robinhoodChain.id],
           showQrModal: true,
-          rpcMap: { [robinhoodChain.id]: RPC_URL },
+          rpcMap: { [robinhoodChain.id]: WALLET_RPC_URL },
           methods: ["eth_sendTransaction", "personal_sign"],
           events: ["chainChanged", "accountsChanged"],
           metadata: {
@@ -240,7 +249,7 @@ export default function SwapWidget() {
       if (!provider.session) {
         await provider.connect({
           chains: [robinhoodChain.id],
-          rpcMap: { [robinhoodChain.id]: RPC_URL },
+          rpcMap: { [robinhoodChain.id]: WALLET_RPC_URL },
         });
       }
 
@@ -538,6 +547,15 @@ export default function SwapWidget() {
             {swapLoading ? "WAIT 4 CHICKEN…" : account ? "SWAP NOW!!!" : "CONNECT A WALLET FIRST"}
           </button>
           <p id="swap-status" className="swap-status" aria-live="polite">{message}</p>
+          {quote === null && !quoteLoading && (
+            <button
+              type="button"
+              className="quote-retry"
+              onClick={() => setQuoteAttempt((attempt) => attempt + 1)}
+            >
+              🔄 KICK THE QUOTER AGAIN
+            </button>
+          )}
           {txHash && (
             <a
               className="tx-link"

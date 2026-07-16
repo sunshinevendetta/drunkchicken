@@ -771,6 +771,18 @@ h1 {
   cursor: pointer;
 }
 
+.swap-panel .quote-retry {
+  margin-top: 10px;
+  padding: 8px;
+  color: #000;
+  background: #ffb000;
+  border: 3px outset #fff;
+  box-shadow: 3px 3px 0 #000;
+  font: 900 0.68rem/1 "Courier New", monospace;
+  transform: rotate(-0.7deg);
+  cursor: pointer;
+}
+
 .swap-panel > button {
   width: 100%;
   padding: 16px;
