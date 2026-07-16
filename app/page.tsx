@@ -130,7 +130,7 @@ export default function Home() {
         <span className="tape tape-two">COPY THIS THING</span>
         <div className="contract-window">
           <div className="window-titlebar">
-            <span id="contract-title">🍺 TOKEN_ADDRESS_FINAL_FINAL_REAL.txt</span>
+            <span id="contract-title">🍺 TOKEN_ADDRESS_FINAL_FINAL_IMDOINGITRIGHT_DRUNK_BLABLABLA.txt</span>
             <span aria-hidden="true">_ □ ×</span>
           </div>
           <p className="contract-label">CONTRACT ADDRESS (CA)</p>
