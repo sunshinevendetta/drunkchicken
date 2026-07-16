@@ -168,7 +168,7 @@ export default function Home() {
         <div className="lore-grid">
           <article className="ugly-card card-yellow">
             <span className="card-icon" aria-hidden="true">🐣</span>
-            <h3>THE PLAN???</h3>
+            <h3>THE BEST BAD DECISION</h3>
             <p>The drunk chicken you bought while drunk, outperforming your entire portfolio. 🐔📈</p>
           </article>
           <article className="ugly-card card-pink">
