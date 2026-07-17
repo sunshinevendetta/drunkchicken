@@ -1,38 +1,51 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import StarBorder from "./components/react-bits/StarBorder";
 import SwapWidget from "./components/SwapWidget";
+import { pageCopy } from "./content";
+import { isLocale, LOCALE_STORAGE_KEY, type Locale } from "./lib/i18n";
 
 const CONTRACT_ADDRESS = "0xc7cA3Cade27bbD9514389C0427870770E49bfe7F";
 const PONS_URL =
   "https://pons.family/launchpad/0xc7cA3Cade27bbD9514389C0427870770E49bfe7F";
+const LOCALE_CHANGE_EVENT = "drunkchicken-locale-change";
 
-const chaosWords = [
-  "🍺 100% CHICKEN",
-  "🐔 0% COORDINASHUN",
-  "💥 MAXIMUM CLUCK",
-  "📺 PONS FAMLY APPROVD*",
-  "🍗 BEST VIEEWED AFTER MIDNITE",
-];
+function getLocaleSnapshot(): Locale {
+  const savedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+  return isLocale(savedLocale) ? savedLocale : "en";
+}
 
-const drunkTabMessages = [
-  "$DRUNKCHICKEN is typign...",
-  "helo holder u awake??? 🐔",
-  "wen rich i spild the chart",
-  "dont sell im still txting",
-  "chikcen.exe had one beer",
-  "wait wher is my portfoilo",
-  "ok luv u holderss 🍗💸",
-];
+function getServerLocaleSnapshot(): Locale {
+  return "en";
+}
+
+function subscribeToLocale(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(LOCALE_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(LOCALE_CHANGE_EVENT, onStoreChange);
+  };
+}
 
 export default function Home() {
   const [copied, setCopied] = useState(false);
+  const locale = useSyncExternalStore(
+    subscribeToLocale,
+    getLocaleSnapshot,
+    getServerLocaleSnapshot,
+  );
+  const t = pageCopy[locale];
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      document.title = "$DRUNKCHICKEN 🍺 helo holderss";
+      document.title = t.reducedTitle;
       return;
     }
 
@@ -41,7 +54,7 @@ export default function Home() {
     let timeoutId = 0;
 
     const typeDrunkText = () => {
-      const message = drunkTabMessages[messageIndex];
+      const message = t.tabMessages[messageIndex];
       characterIndex += 1;
       document.title = `${message.slice(0, characterIndex)}${characterIndex < message.length ? "▌" : ""}`;
 
@@ -51,7 +64,7 @@ export default function Home() {
       }
 
       timeoutId = window.setTimeout(() => {
-        messageIndex = (messageIndex + 1) % drunkTabMessages.length;
+        messageIndex = (messageIndex + 1) % t.tabMessages.length;
         characterIndex = 0;
         typeDrunkText();
       }, 950);
@@ -59,7 +72,13 @@ export default function Home() {
 
     typeDrunkText();
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [t.reducedTitle, t.tabMessages]);
+
+  function toggleLocale() {
+    const nextLocale: Locale = locale === "en" ? "zh-HK" : "en";
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
+    window.dispatchEvent(new Event(LOCALE_CHANGE_EVENT));
+  }
 
   async function copyContract() {
     await navigator.clipboard.writeText(CONTRACT_ADDRESS);
@@ -70,32 +89,44 @@ export default function Home() {
   return (
     <main id="top" className="site-shell">
       <a className="skip-link" href="#contract">
-        Skip to contract
+        {t.skip}
       </a>
 
-      <div className="panic-bar" aria-label="Important announcement">
+      <div className="panic-bar" aria-label={t.announcementAria}>
         <div className="panic-track">
-          {[...chaosWords, ...chaosWords].map((word, index) => (
+          {[...t.chaosWords, ...t.chaosWords].map((word, index) => (
             <span key={`${word}-${index}`}>{word}</span>
           ))}
         </div>
       </div>
 
       <header className="chaos-nav">
-        <a className="brand" href="#top" aria-label="DRUNKCHICKEN home">
+        <a className="brand" href="#top" aria-label={t.homeAria}>
           <span aria-hidden="true">🐔</span>
           <strong>$DRUNKCHICKEN</strong>
         </a>
-        <nav aria-label="Primary navigation">
+        <nav aria-label={t.navAria}>
           <a href="#contract">CA</a>
           <a href="#swap">SWAP</a>
-          <a href="#lore">WHY?</a>
-          <a href="#manifesto">MANIFSTO</a>
+          <a href="#lore">{t.navWhy}</a>
+          <a href="#manifesto">{t.navManifesto}</a>
           <a href={PONS_URL} target="_blank" rel="noreferrer">
             PONS ↗
           </a>
         </nav>
-        <span className="online-dot">● ONLNE??</span>
+        <div className="nav-tools">
+          <button
+            type="button"
+            className="language-switcher"
+            onClick={toggleLocale}
+            aria-label={t.switchAria}
+          >
+            <span>{locale === "en" ? "EN" : "繁中 HK"}</span>
+            <b aria-hidden="true">⇄</b>
+            <span>{t.switchLabel}</span>
+          </button>
+          <span className="online-dot">{t.online}</span>
+        </div>
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
@@ -109,173 +140,143 @@ export default function Home() {
           🍗
         </div>
 
-        <p className="eyebrow">★ THE INTERNET&apos;S LEAST SOBER CHICKEN ★</p>
+        <p className="eyebrow">{t.eyebrow}</p>
         <h1 id="hero-title" className="hero-title">DRUNKCHICKEN</h1>
-        <p className="language-banner" aria-label="Drunk chicken worldwide in Japanese and Chinese">
-          <span lang="ja">酔っぱらいチキン</span> ・ <span lang="zh-CN">醉鸡</span> ・ WORLD
-          WIDE WEB ・ <span lang="zh-CN">醉鸡</span> ・ <span lang="ja">酔っぱらいチキン</span>
+        <p className="language-banner" aria-label={t.languageAria}>
+          <span lang="ja">酔っぱらいチキン</span> ・ <span lang="zh-HK">醉雞</span> ・ {t.worldWide}
+          {" ・ "}<span lang="zh-HK">醉雞</span> ・ <span lang="ja">酔っぱらいチキン</span>
         </p>
-        <div className="brainrot-ribbon" aria-label="Anime chicken shrine warning">
+        <div className="brainrot-ribbon" aria-label={t.shrineAria}>
           <span aria-hidden="true">(˶˃ ᵕ ˂˶) .ᐟ.ᐟ</span>
-          <strong>WELCOME 2 MY CHIKEN SHRINE</strong>
+          <strong>{t.shrine}</strong>
           <span aria-hidden="true">
-            ☆*:・ﾟ <i lang="ja">にわとり最高</i> / <i lang="zh-CN">醉鸡最强</i>
+            ☆*:・ﾟ <i lang="ja">にわとり最高</i> / <i lang="zh-HK">醉雞最強</i>
           </span>
         </div>
 
         <div className="hero-stage">
           <aside className="hero-note note-left">
-            <span className="tiny-label">BREAKING!!!</span>
-            <strong>LAUNCHED ON ROBINHOOD</strong>
+            <span className="tiny-label">{t.breaking}</span>
+            <strong>{t.launched}</strong>
             <span className="arrow" aria-hidden="true">
               ➜➜➜
             </span>
           </aside>
 
           <div className="meme-stack">
-            <span className="new-badge">NEW!</span>
+            <span className="new-badge">{t.newBadge}</span>
             <div className="geocities-photo-frame">
               <Image
                 className="official-meme"
                 src="/drunkchicken.jpg"
-                alt="The official DRUNKCHICKEN meme: a yellow chicken relaxing in an armchair with a beer"
+                alt={t.imageAlt}
                 width={1440}
                 height={1152}
                 priority
               />
-              <div className="infomercial-bug" aria-label="Drunkmaxxer, maxx profits">
-                <small>★ BUT WAIT! ★</small>
+              <div className="infomercial-bug" aria-label={t.infomercialAria}>
+                <small>{t.butWait}</small>
                 <strong>DRUNKMAXXER</strong>
-                <span>MAXX PROFITS*</span>
+                <span>{t.maxxProfits}</span>
               </div>
             </div>
             <p className="photo-caption">
-              <span aria-hidden="true">📸</span> OFICIAL MEME — DO NOT FEED AFTER 2AM
+              <span aria-hidden="true">📸</span> {t.officialMeme}
             </p>
           </div>
 
-          <aside className="as-seen-badge" aria-label="As seen on Pons Family">
-            <span>BUT WAIT! AS SEEN ON</span>
+          <aside className="as-seen-badge" aria-label={t.asSeenAria}>
+            <span>{t.asSeen}</span>
             <strong>PONS</strong>
             <em>FAMILY</em>
-            <small>📺 CALL NOW!!!</small>
+            <small>{t.callNow}</small>
           </aside>
         </div>
 
-        <p className="hero-copy">
-          One chicken. Several bevreges. Zero abiltiy to walk in a straight line.
-        </p>
+        <p className="hero-copy">{t.heroCopy}</p>
       </section>
 
       <section id="contract" className="contract-zone" aria-labelledby="contract-title">
-        <span className="tape tape-one">AUTHENTIC CA</span>
-        <span className="tape tape-two">COPY THIS THING</span>
+        <span className="tape tape-one">{t.tapeAuthentic}</span>
+        <span className="tape tape-two">{t.tapeCopy}</span>
         <div className="contract-window">
           <div className="window-titlebar">
-            <span id="contract-title">🍺 TOKEN_ADDRESS_FINAL_FINAL_IMDOINGITRIGHT_DRUNK_BLABLABLA.txt</span>
+            <span id="contract-title">{t.contractTitle}</span>
             <span aria-hidden="true">_ □ ×</span>
           </div>
-          <p className="contract-label">CONTRACT ADDRESS (CA)</p>
+          <p className="contract-label">{t.contractLabel}</p>
           <code>{CONTRACT_ADDRESS}</code>
           <div className="contract-actions">
             <button type="button" onClick={copyContract} aria-live="polite">
-              {copied ? "✓ COPIED. CLUCK!" : "📋 COPY CA"}
+              {copied ? t.copied : t.copyCa}
             </button>
             <a href={PONS_URL} target="_blank" rel="noreferrer">
-              GET IT ON PONS FAMILY ↗
+              {t.getPons}
             </a>
           </div>
-          <p className="small-print">
-            CHECK THE FULL ADDRESS. THE CHICKEN CANNOT TYPE AND WILL NOT FIX YOUR MISTAKES.
-          </p>
+          <p className="small-print">{t.contractWarning}</p>
         </div>
       </section>
 
-      <SwapWidget />
+      <SwapWidget locale={locale} />
 
       <section id="lore" className="lore-zone" aria-labelledby="lore-title">
         <div className="anime-banner">
           <span aria-hidden="true">✨</span>
           <div>
-            <small>THE LEGEND OF</small>
-            <h2 id="lore-title">THE DRUNKEST CHICKEN</h2>
+            <small>{t.legendOf}</small>
+            <h2 id="lore-title">{t.drunkestChicken}</h2>
             <p>
               <span lang="ja">酔っても、まだ鳴く。</span>{" // "}
-              <span lang="zh-CN">就算喝醉了，也还会咯咯叫。</span>{" // "}EVEN DRUNK, IT STILL CLUCKS.
+              <span lang="zh-HK">就算飲醉，都仲識咯咯叫。</span>{" // "}{t.legendLine}
             </p>
           </div>
           <span aria-hidden="true">✨</span>
         </div>
 
         <div className="lore-grid">
-          <article className="ugly-card card-yellow">
-            <h3>THE PLAN??? 🐣</h3>
-            <p>Get drunk while the chicken moons. We get richer. Try to keep up. 🍻🌕</p>
-          </article>
-          <article className="ugly-card card-pink">
-            <h3>THE IDEA 🐔</h3>
-            <p>One drunk chicken you bought while drunk, outperforming your entire portfolio. 🐔📈</p>
-          </article>
-          <article className="ugly-card card-cyan">
-            <h3>THE BEST BAD DECISION 🍻</h3>
-            <p>Buying one drunk chicken and getting rich. 🍗💸</p>
-          </article>
+          {t.cards.map(([title, copy], index) => (
+            <article
+              className={`ugly-card ${["card-yellow", "card-pink", "card-cyan"][index]}`}
+              key={title}
+            >
+              <h3>{title}</h3>
+              <p>{copy}</p>
+            </article>
+          ))}
         </div>
       </section>
 
       <section id="manifesto" className="manifesto-zone" aria-labelledby="manifesto-title">
-        <span className="manifesto-sticker">4:07 AM // 12% BATTRY</span>
+        <span className="manifesto-sticker">{t.manifestoSticker}</span>
         <div className="manifesto-window">
           <div className="manifesto-titlebar">
-            <span>🍺 drunkchikcen_unsent_FINAL_final_2.txt</span>
+            <span>{t.manifestoFile}</span>
             <span aria-hidden="true">_ □ ×</span>
           </div>
           <div className="manifesto-screen">
             <p className="manifesto-meta">
-              <span>TO: teh holderss 💚</span>
-              <span>delivred probably ✓✓</span>
+              <span>{t.manifestoTo}</span>
+              <span>{t.manifestoDelivery}</span>
             </p>
-            <h2 id="manifesto-title">THE DRUNKCHICKEN MANIFSTO</h2>
+            <h2 id="manifesto-title">{t.manifestoTitle}</h2>
 
-            <div className="drunk-message msg-one">
-              helo holders its me. the drunk chiken. i foudn the phone behind couch and i have
-              somthing importnat to say
-              <small>4:07 AM</small>
-            </div>
-            <div className="drunk-message msg-two">
-              we are gona get rich becase i did the math on a napkin and the napkin said YES. i
-              lost teh napkin but trust the proces probably
-              <small>4:08 AM</small>
-            </div>
-            <div className="drunk-message msg-three">
-              RULE 1: hold the chicken. RULE 2: hold my drink. RULE 3: wait wich one was the token
-              <small>4:08 AM</small>
-            </div>
-            <div className="drunk-message msg-four">
-              if chart go up: genius. if chart go down: chicken is just bending knees for a HUGE
-              jump. this is sicence
-              <small>4:09 AM</small>
-            </div>
-            <div className="drunk-message msg-five">
-              we dont leave holders at the bar. we cluck together. we drunkmaxx together. we wake
-              up and check wallet with one eye together
-              <small>4:11 AM</small>
-            </div>
-            <p className="manifesto-signoff">
-              ok goodnite see u at the top or in the group chat asking what happend. luv, chicken
-              xoxo
-            </p>
-            <strong className="manifesto-stamp">GET RIHCH OR GET ANOTHR ROUND</strong>
+            {t.manifestoMessages.map(([message, time], index) => (
+              <div className={`drunk-message ${["msg-one", "msg-two", "msg-three", "msg-four", "msg-five"][index]}`} key={time + message}>
+                {message}
+                <small>{time}</small>
+              </div>
+            ))}
+            <p className="manifesto-signoff">{t.manifestoSignoff}</p>
+            <strong className="manifesto-stamp">{t.manifestoStamp}</strong>
           </div>
         </div>
-        <p className="manifesto-footnote">
-          *napkin math is not financal advice. the napkin has not been located.
-        </p>
+        <p className="manifesto-footnote">{t.manifestoFootnote}</p>
       </section>
 
-      <section className="final-cta" aria-label="Visit DRUNKCHICKEN on Pons Family">
-        <p>YOU HAVE REACHED THE BOTTOM OF THE INTERNET.</p>
-        <h2 className="cta-title">STILL THIRSTY?</h2>
+      <section className="final-cta" aria-label={t.finalAria}>
+        <p>{t.bottomInternet}</p>
+        <h2 className="cta-title">{t.thirsty}</h2>
         <StarBorder
           href={PONS_URL}
           target="_blank"
@@ -284,19 +285,19 @@ export default function Home() {
           speed="4s"
           className="geocities-star-button"
         >
-          🐔 ENTER PONS FAMILY 🐔
+          {t.enterPons}
         </StarBorder>
       </section>
 
       <footer>
-        <p>© 1994–FOREVER DRUNKCHICKEN WORLD WIDE WEB HEADQUARTERS</p>
+        <p>{t.footerHq}</p>
         <p className="footer-language">
           <span lang="ja">酔っぱらいチキン世界網本部</span>{" // "}
-          <span lang="zh-CN">醉鸡万维网总部</span>
+          <span lang="zh-HK">醉雞萬維網總部</span>
         </p>
-        <p>MEME TOKEN. NOT FINANCIAL ADVICE. DON&apos;T DRINK AND TRADE.</p>
-        <div className="visitor-counter" aria-label="Fake visitor counter">
-          VISITOR # 000🍺420
+        <p>{t.footerDisclaimer}</p>
+        <div className="visitor-counter" aria-label={t.visitorAria}>
+          {t.visitor}
         </div>
       </footer>
     </main>

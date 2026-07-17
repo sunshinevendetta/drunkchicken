@@ -15,6 +15,8 @@ import {
   type Address,
   type EIP1193Provider,
 } from "viem";
+import type { Locale } from "../lib/i18n";
+import { swapCopy } from "../swap-content";
 
 declare global {
   interface Window {
@@ -92,19 +94,22 @@ function shortAddress(address: Address) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-function readableError(error: unknown) {
+function readableError(error: unknown, locale: Locale) {
+  const t = swapCopy[locale].errors;
   const maybeError = error as { shortMessage?: string; message?: string };
-  const message = maybeError.shortMessage ?? maybeError.message ?? "The swap could not be completed.";
-  if (/rejected|denied/i.test(message)) return "Transaction cancelled in wallet.";
-  if (/insufficient funds/i.test(message)) return "Not enough ETH for the swap and gas.";
-  if (/slippage|amountoutminimum/i.test(message)) return "Price moved too fast. Refresh the quote and try again.";
+  const message = maybeError.shortMessage ?? maybeError.message ?? t.fallback;
+  if (/rejected|denied/i.test(message)) return t.cancelled;
+  if (/insufficient funds/i.test(message)) return t.insufficient;
+  if (/slippage|amountoutminimum/i.test(message)) return t.moved;
   if (/RPC is busy|rate.?limit|429|HTTP request failed|Failed to fetch/i.test(message)) {
-    return "ROBINHOOD RPC IS BUSY. WAIT A FEW SECONDS, THEN KICK THE QUOTER AGAIN.";
+    return t.rpc;
   }
   return message.split("\n")[0].slice(0, 180);
 }
 
-export default function SwapWidget() {
+export default function SwapWidget({ locale }: { locale: Locale }) {
+  const t = swapCopy[locale];
+  const localeRef = useRef(locale);
   const activeProviderRef = useRef<EIP1193Provider | null>(null);
   const walletConnectProviderRef = useRef<WalletConnectProvider | null>(null);
   const [amount, setAmount] = useState("0.01");
@@ -119,7 +124,7 @@ export default function SwapWidget() {
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteAttempt, setQuoteAttempt] = useState(0);
   const [swapLoading, setSwapLoading] = useState(false);
-  const [message, setMessage] = useState("LIVE QUOTE FROM THE VERIFIED DRUNKCHICKEN POOL");
+  const [message, setMessage] = useState<string>(t.initial);
   const [txHash, setTxHash] = useState<Address | null>(null);
   const tokenIn = direction === "buy" ? WETH : TOKEN;
   const tokenOut = direction === "buy" ? TOKEN : WETH;
@@ -127,10 +132,14 @@ export default function SwapWidget() {
   const outputAsset = direction === "buy" ? "DRUNKCHICKEN" : sellAsset;
 
   useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
+
+  useEffect(() => {
     const timer = window.setTimeout(async () => {
       try {
         const amountIn = parseEther(amount);
-        if (amountIn <= 0n) throw new Error("Enter an ETH amount.");
+        if (amountIn <= 0n) throw new Error(t.errors.enterAmount);
         setQuoteLoading(true);
         const { result } = await publicClient.simulateContract({
           address: QUOTER,
@@ -145,24 +154,24 @@ export default function SwapWidget() {
           }],
         });
         setQuote(result[0]);
-        setMessage(`QUOTE READY ☆ ${inputAsset} → ${outputAsset} ON ROBINHOOD CHAIN`);
+        setMessage(t.quoteReady(inputAsset, outputAsset));
       } catch (error) {
         setQuote(null);
-        setMessage(readableError(error));
+        setMessage(readableError(error, locale));
       } finally {
         setQuoteLoading(false);
       }
     }, 400);
 
     return () => window.clearTimeout(timer);
-  }, [amount, inputAsset, outputAsset, quoteAttempt, tokenIn, tokenOut]);
+  }, [amount, inputAsset, locale, outputAsset, quoteAttempt, t, tokenIn, tokenOut]);
 
   const formattedQuote = useMemo(() => {
     if (quote === null) return "—";
-    return Number(formatUnits(quote, 18)).toLocaleString(undefined, {
+    return Number(formatUnits(quote, 18)).toLocaleString(locale === "zh-HK" ? "zh-HK" : "en-US", {
       maximumFractionDigits: direction === "buy" ? 0 : 8,
     });
-  }, [direction, quote]);
+  }, [direction, locale, quote]);
 
   function walletClientFor(provider: EIP1193Provider) {
     const walletClient = createWalletClient({
@@ -175,16 +184,14 @@ export default function SwapWidget() {
   async function connectBrowserWallet() {
     try {
       setWalletLoading("browser");
-      setMessage("LOOKING FOR A BROWSER WALLET…");
+      setMessage(t.lookingBrowser);
       if (!window.ethereum) {
-        throw new Error(
-          "No browser wallet found. Use WalletConnect QR or install an EVM wallet.",
-        );
+        throw new Error(t.errors.noBrowser);
       }
 
       const walletClient = walletClientFor(window.ethereum);
       const [connectedAccount] = await walletClient.requestAddresses();
-      if (!connectedAccount) throw new Error("No wallet account selected.");
+      if (!connectedAccount) throw new Error(t.errors.noAccount);
 
       try {
         await walletClient.switchChain({ id: robinhoodChain.id });
@@ -196,9 +203,9 @@ export default function SwapWidget() {
       activeProviderRef.current = window.ethereum;
       setAccount(connectedAccount);
       setWalletKind("browser");
-      setMessage("BROWSER WALLET CONNECTED ☆ ROBINHOOD CHAIN READY");
+      setMessage(t.browserConnected);
     } catch (error) {
-      setMessage(readableError(error));
+      setMessage(readableError(error, locale));
     } finally {
       setWalletLoading(null);
     }
@@ -207,11 +214,9 @@ export default function SwapWidget() {
   async function connectWalletConnect() {
     try {
       setWalletLoading("walletconnect");
-      setMessage("OPENING WALLETCONNECT QR… MOBILE CHICKENS INCOMING");
+      setMessage(t.openingWc);
       if (!WALLETCONNECT_PROJECT_ID) {
-        throw new Error(
-          "WalletConnect is not configured. Add NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID to .env.local.",
-        );
+        throw new Error(t.errors.wcConfig);
       }
 
       let provider = walletConnectProviderRef.current;
@@ -241,7 +246,7 @@ export default function SwapWidget() {
           walletConnectProviderRef.current = null;
           setAccount(null);
           setWalletKind(null);
-          setMessage("WALLETCONNECT DISCONNECTED. THE CHICKEN IS ALONE AGAIN.");
+          setMessage(swapCopy[localeRef.current].wcDisconnected);
         });
         walletConnectProviderRef.current = provider;
       }
@@ -255,19 +260,19 @@ export default function SwapWidget() {
 
       const walletClient = walletClientFor(provider);
       const [connectedAccount] = await walletClient.requestAddresses();
-      if (!connectedAccount) throw new Error("No wallet account selected.");
+      if (!connectedAccount) throw new Error(t.errors.noAccount);
 
       const connectedChain = await walletClient.getChainId();
       if (connectedChain !== robinhoodChain.id) {
-        throw new Error("Approve Robinhood Chain in WalletConnect, then try again.");
+        throw new Error(t.errors.approveChain);
       }
 
       activeProviderRef.current = provider;
       setAccount(connectedAccount);
       setWalletKind("walletconnect");
-      setMessage("WALLETCONNECT LINKED ☆ ROBINHOOD CHAIN READY");
+      setMessage(t.wcConnected);
     } catch (error) {
-      setMessage(readableError(error));
+      setMessage(readableError(error, locale));
     } finally {
       setWalletLoading(null);
     }
@@ -281,7 +286,7 @@ export default function SwapWidget() {
     activeProviderRef.current = null;
     setAccount(null);
     setWalletKind(null);
-    setMessage("WALLET FORGOTTEN. CONNECT AGAIN WHEN THE ROOM STOPS SPINNING.");
+    setMessage(t.forgotten);
   }
 
   function changeDirection(nextDirection: SwapDirection) {
@@ -290,8 +295,8 @@ export default function SwapWidget() {
     setTxHash(null);
     setMessage(
       nextDirection === "buy"
-        ? "BUY MODE… PICK ETH OR WETH AND AIM AT THE CHICKEN"
-        : "SELL MODE… PICK WETH OR UNWRAPPED ETH",
+        ? t.buyMode
+        : t.sellMode,
     );
   }
 
@@ -299,11 +304,11 @@ export default function SwapWidget() {
     try {
       setSwapLoading(true);
       setTxHash(null);
-      setMessage("OPENING WALLET… DO NOT FEED THE POP-UP");
+      setMessage(t.openingWallet);
       const amountIn = parseEther(amount);
-      if (amountIn <= 0n) throw new Error("Enter an ETH amount.");
+      if (amountIn <= 0n) throw new Error(t.errors.enterAmount);
       if (!account || !activeProviderRef.current) {
-        throw new Error("Connect a browser wallet or WalletConnect first.");
+        throw new Error(t.errors.connectFirst);
       }
 
       const { result: freshQuote } = await publicClient.simulateContract({
@@ -331,7 +336,7 @@ export default function SwapWidget() {
         });
 
         if (allowance < amountIn) {
-          setMessage(`APPROVE ${inputAsset}… ONE WALLET CONFIRMATION BEFORE THE SWAP`);
+          setMessage(t.approving(inputAsset));
           const { request: approvalRequest } = await publicClient.simulateContract({
             account: connectedAccount,
             address: tokenIn,
@@ -344,12 +349,12 @@ export default function SwapWidget() {
             hash: approvalHash,
           });
           if (approvalReceipt.status !== "success") {
-            throw new Error(`${inputAsset} approval reverted onchain.`);
+            throw new Error(t.errors.approvalReverted(inputAsset));
           }
         }
       }
 
-      setMessage("CONFIRM THE ONCHAIN SWAP IN YOUR WALLET");
+      setMessage(t.confirmSwap);
       const swapParams = {
         tokenIn,
         tokenOut,
@@ -395,12 +400,12 @@ export default function SwapWidget() {
       }
 
       setTxHash(hash);
-      setMessage("TRANSACTION SENT… CHICKEN IS CROSSING THE CHAIN");
+      setMessage(t.transactionSent);
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status !== "success") throw new Error("The transaction reverted onchain.");
-      setMessage("SUCCESS!!! DRUNKCHICKEN HAS ENTERED THE WALLET ☆彡");
+      if (receipt.status !== "success") throw new Error(t.errors.transactionReverted);
+      setMessage(t.success);
     } catch (error) {
-      setMessage(readableError(error));
+      setMessage(readableError(error, locale));
     } finally {
       setSwapLoading(false);
     }
@@ -409,36 +414,35 @@ export default function SwapWidget() {
   return (
     <section id="swap" className="swap-zone" aria-labelledby="swap-title">
       <div className="swap-anime-rail" aria-hidden="true">
-        ✦ <span lang="ja">にわとり交換所</span> ✦ <span lang="zh-CN">小鸡交换所</span> ✦ BUY
-        THE BIRD ✦ ૮₍˶• . • ⑅₎ა ✦ <span lang="zh-CN">立即换鸡</span> ✦
+        {t.rail}
       </div>
       <div className="swap-window">
         <div className="swap-titlebar">
-          <span>🐔 swap_REAL_final_FINAL2_use_this.exe</span>
+          <span>{t.swapFile}</span>
           <span>
             {account
-              ? `${walletKind === "walletconnect" ? "WC" : "BROWSER"}: ${shortAddress(account)}`
-              : "WALLET: OFFLINE"}
+              ? `${walletKind === "walletconnect" ? "WC" : t.browserShort}: ${shortAddress(account)}`
+              : t.walletOffline}
           </span>
         </div>
         <div className="swap-headline">
           <span className="swap-face" aria-hidden="true">(づ｡◕‿‿◕｡)づ</span>
           <div>
-            <p>DIRECT ONCHAIN SWAP</p>
+            <p>{t.directSwap}</p>
             <h2 id="swap-title">{inputAsset} → {outputAsset}</h2>
           </div>
           <span className="swap-face" aria-hidden="true">☆ ～(&apos;▽^人)</span>
         </div>
 
         <div className="swap-panel">
-          <div className="route-tabs" role="group" aria-label="Swap direction">
+          <div className="route-tabs" role="group" aria-label={t.directionAria}>
             <button
               type="button"
               className={direction === "buy" ? "is-active" : ""}
               aria-pressed={direction === "buy"}
               onClick={() => changeDirection("buy")}
             >
-              BUY CHICKEN
+              {t.buyChicken}
             </button>
             <button
               type="button"
@@ -446,10 +450,10 @@ export default function SwapWidget() {
               aria-pressed={direction === "sell"}
               onClick={() => changeDirection("sell")}
             >
-              SELL CHICKEN
+              {t.sellChicken}
             </button>
           </div>
-          <label htmlFor="swap-amount">YOU PAY</label>
+          <label htmlFor="swap-amount">{t.youPay}</label>
           <div className="swap-input-row">
             <input
               id="swap-amount"
@@ -461,7 +465,7 @@ export default function SwapWidget() {
             {direction === "buy" ? (
               <select
                 className="asset-select"
-                aria-label="Asset to pay"
+                aria-label={t.payAria}
                 value={buyAsset}
                 onChange={(event) => setBuyAsset(event.target.value as BuyAsset)}
               >
@@ -473,13 +477,13 @@ export default function SwapWidget() {
             )}
           </div>
           <div className="swap-arrow" aria-hidden="true">⇩ 🥴 ⇩</div>
-          <p className="receive-label">YOU RECEIVE (EST.)</p>
+          <p className="receive-label">{t.receive}</p>
           <div className="swap-output">
-            <strong>{quoteLoading ? "CALCULATING…" : formattedQuote}</strong>
+            <strong>{quoteLoading ? t.calculating : formattedQuote}</strong>
             {direction === "sell" ? (
               <select
                 className="asset-select"
-                aria-label="Asset to receive"
+                aria-label={t.receiveAria}
                 value={sellAsset}
                 onChange={(event) => setSellAsset(event.target.value as SellAsset)}
               >
@@ -492,7 +496,7 @@ export default function SwapWidget() {
           </div>
 
           <div className="slippage-row">
-            <label htmlFor="slippage">MAX SLIPPAGE</label>
+            <label htmlFor="slippage">{t.maxSlippage}</label>
             <select
               id="slippage"
               value={slippageBps}
@@ -505,7 +509,7 @@ export default function SwapWidget() {
             </select>
           </div>
 
-          <div className="wallet-options" role="group" aria-label="Choose wallet connection">
+          <div className="wallet-options" role="group" aria-label={t.walletAria}>
             <button
               type="button"
               className={walletKind === "browser" ? "is-active" : ""}
@@ -513,7 +517,7 @@ export default function SwapWidget() {
               onClick={connectBrowserWallet}
               disabled={walletLoading !== null || swapLoading}
             >
-              {walletLoading === "browser" ? "SEARCHING…" : "🦊 BROWSER WALLET"}
+              {walletLoading === "browser" ? t.searching : t.browserWallet}
             </button>
             <button
               type="button"
@@ -522,20 +526,20 @@ export default function SwapWidget() {
               onClick={connectWalletConnect}
               disabled={walletLoading !== null || swapLoading}
             >
-              {walletLoading === "walletconnect" ? "OPENING QR…" : "📱 WALLETCONNECT QR"}
+              {walletLoading === "walletconnect" ? t.openingQr : t.wcQr}
             </button>
           </div>
 
           {!WALLETCONNECT_PROJECT_ID && (
             <p className="wallet-config-warning">
-              ADMIN: ADD NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID TO ENABLE QR CONNECTIONS.
+              {t.adminWarning}
             </p>
           )}
 
           {account && (
             <div className="wallet-connected">
-              <span>CONNECTED VIA {walletKind === "walletconnect" ? "WALLETCONNECT" : "BROWSER"}</span>
-              <button type="button" onClick={disconnectWallet}>DISCONNECT</button>
+              <span>{t.connectedVia} {walletKind === "walletconnect" ? "WALLETCONNECT" : t.browserShort}</span>
+              <button type="button" onClick={disconnectWallet}>{t.disconnect}</button>
             </div>
           )}
 
@@ -544,7 +548,7 @@ export default function SwapWidget() {
             onClick={executeSwap}
             disabled={swapLoading || quote === null || account === null}
           >
-            {swapLoading ? "WAIT 4 CHICKEN…" : account ? "SWAP NOW!!!" : "CONNECT A WALLET FIRST"}
+            {swapLoading ? t.waiting : account ? t.swapNow : t.connectButton}
           </button>
           <p id="swap-status" className="swap-status" aria-live="polite">{message}</p>
           {quote === null && !quoteLoading && (
@@ -553,7 +557,7 @@ export default function SwapWidget() {
               className="quote-retry"
               onClick={() => setQuoteAttempt((attempt) => attempt + 1)}
             >
-              🔄 KICK THE QUOTER AGAIN
+              {t.retryQuote}
             </button>
           )}
           {txHash && (
@@ -563,16 +567,13 @@ export default function SwapWidget() {
               target="_blank"
               rel="noreferrer"
             >
-              VIEW TRANSACTION RECEIPT ↗
+              {t.receipt}
             </a>
           )}
         </div>
 
         <p className="swap-disclaimer">
-          Uses the verified DRUNKCHICKEN / WETH pool and Robinhood Chain contracts. Your wallet
-          signs the transaction through a browser wallet or WalletConnect; this site never sees
-          private keys. ERC-20 routes may require approval first. ETH output unwraps WETH atomically.
-          Quotes can move before confirmation.
+          {t.disclaimer}
         </p>
       </div>
     </section>

@@ -25,6 +25,10 @@ body {
   overflow-x: hidden;
 }
 
+html[lang="zh-HK"] body {
+  font-family: "Microsoft JhengHei", "PingFang HK", "Noto Sans TC", sans-serif;
+}
+
 a {
   color: inherit;
 }
@@ -123,6 +127,45 @@ a {
 
 .chaos-nav nav a:nth-child(3) {
   background: var(--acid);
+}
+
+.nav-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-self: end;
+  gap: 7px;
+}
+
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  color: #000;
+  background: var(--acid);
+  border: 3px outset #fff;
+  box-shadow: 3px 3px 0 var(--pink);
+  font: 900 0.62rem/1 "Courier New", monospace;
+  transform: rotate(1.4deg);
+  cursor: pointer;
+}
+
+.language-switcher b {
+  color: var(--red);
+  font-size: 0.9rem;
+}
+
+.language-switcher span:last-child {
+  color: #fff;
+  background: #000080;
+  padding: 3px 4px;
+}
+
+.language-switcher:active {
+  border-style: inset;
+  box-shadow: none;
+  transform: translate(3px, 3px) rotate(-1deg);
 }
 
 .online-dot {
@@ -1133,6 +1176,12 @@ footer p {
 @media (max-width: 900px) {
   .chaos-nav {
     grid-template-columns: 1fr auto;
+  }
+
+  .nav-tools {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-self: center;
   }
 
   .online-dot {

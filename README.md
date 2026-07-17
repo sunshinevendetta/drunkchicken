@@ -11,6 +11,7 @@ The official intentionally ugly GeoCities-meets-anime-brainrot website for
 - React Bits `StarBorder`, adapted to the site
 - viem for direct Robinhood Chain swaps
 - WalletConnect / Reown for QR-based wallet sessions
+- Persistent English / Traditional Chinese (Hong Kong) interface switcher
 
 ## Local development
 
