@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import StarBorder from "./components/react-bits/StarBorder";
 import SwapWidget from "./components/SwapWidget";
 
@@ -11,14 +11,55 @@ const PONS_URL =
 
 const chaosWords = [
   "🍺 100% CHICKEN",
-  "🐔 0% COORDINATION",
+  "🐔 0% COORDINASHUN",
   "💥 MAXIMUM CLUCK",
-  "📺 PONS FAMILY APPROVED*",
-  "🍗 BEST VIEWED AFTER MIDNIGHT",
+  "📺 PONS FAMLY APPROVD*",
+  "🍗 BEST VIEEWED AFTER MIDNITE",
+];
+
+const drunkTabMessages = [
+  "$DRUNKCHICKEN is typign...",
+  "helo holder u awake??? 🐔",
+  "wen rich i spild the chart",
+  "dont sell im still txting",
+  "chikcen.exe had one beer",
+  "wait wher is my portfoilo",
+  "ok luv u holderss 🍗💸",
 ];
 
 export default function Home() {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.title = "$DRUNKCHICKEN 🍺 helo holderss";
+      return;
+    }
+
+    let messageIndex = 0;
+    let characterIndex = 0;
+    let timeoutId = 0;
+
+    const typeDrunkText = () => {
+      const message = drunkTabMessages[messageIndex];
+      characterIndex += 1;
+      document.title = `${message.slice(0, characterIndex)}${characterIndex < message.length ? "▌" : ""}`;
+
+      if (characterIndex < message.length) {
+        timeoutId = window.setTimeout(typeDrunkText, 105 + (characterIndex % 4) * 38);
+        return;
+      }
+
+      timeoutId = window.setTimeout(() => {
+        messageIndex = (messageIndex + 1) % drunkTabMessages.length;
+        characterIndex = 0;
+        typeDrunkText();
+      }, 950);
+    };
+
+    typeDrunkText();
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   async function copyContract() {
     await navigator.clipboard.writeText(CONTRACT_ADDRESS);
@@ -49,11 +90,12 @@ export default function Home() {
           <a href="#contract">CA</a>
           <a href="#swap">SWAP</a>
           <a href="#lore">WHY?</a>
+          <a href="#manifesto">MANIFSTO</a>
           <a href={PONS_URL} target="_blank" rel="noreferrer">
             PONS ↗
           </a>
         </nav>
-        <span className="online-dot">● ONLINE??</span>
+        <span className="online-dot">● ONLNE??</span>
       </header>
 
       <section className="hero" aria-labelledby="hero-title">
@@ -75,7 +117,7 @@ export default function Home() {
         </p>
         <div className="brainrot-ribbon" aria-label="Anime chicken shrine warning">
           <span aria-hidden="true">(˶˃ ᵕ ˂˶) .ᐟ.ᐟ</span>
-          <strong>WELCOME 2 MY CHICKEN SHRINE</strong>
+          <strong>WELCOME 2 MY CHIKEN SHRINE</strong>
           <span aria-hidden="true">
             ☆*:・ﾟ <i lang="ja">にわとり最高</i> / <i lang="zh-CN">醉鸡最强</i>
           </span>
@@ -108,7 +150,7 @@ export default function Home() {
               </div>
             </div>
             <p className="photo-caption">
-              <span aria-hidden="true">📸</span> OFFICIAL MEME — DO NOT FEED AFTER 2AM
+              <span aria-hidden="true">📸</span> OFICIAL MEME — DO NOT FEED AFTER 2AM
             </p>
           </div>
 
@@ -121,7 +163,7 @@ export default function Home() {
         </div>
 
         <p className="hero-copy">
-          One chicken. Several beverages. Zero ability to walk in a straight line.
+          One chicken. Several bevreges. Zero abiltiy to walk in a straight line.
         </p>
       </section>
 
@@ -182,6 +224,56 @@ export default function Home() {
             <p>Broadcasting live from the Pons Family launchpad to every cursed guestbook.</p>
           </article>
         </div>
+      </section>
+
+      <section id="manifesto" className="manifesto-zone" aria-labelledby="manifesto-title">
+        <span className="manifesto-sticker">4:07 AM // 12% BATTRY</span>
+        <div className="manifesto-window">
+          <div className="manifesto-titlebar">
+            <span>🍺 drunkchikcen_unsent_FINAL_final_2.txt</span>
+            <span aria-hidden="true">_ □ ×</span>
+          </div>
+          <div className="manifesto-screen">
+            <p className="manifesto-meta">
+              <span>TO: teh holderss 💚</span>
+              <span>delivred probably ✓✓</span>
+            </p>
+            <h2 id="manifesto-title">THE DRUNKCHICKEN MANIFSTO</h2>
+
+            <div className="drunk-message msg-one">
+              helo holders its me. the drunk chiken. i foudn the phone behind couch and i have
+              somthing importnat to say
+              <small>4:07 AM</small>
+            </div>
+            <div className="drunk-message msg-two">
+              we are gona get rich becase i did the math on a napkin and the napkin said YES. i
+              lost teh napkin but trust the proces probably
+              <small>4:08 AM</small>
+            </div>
+            <div className="drunk-message msg-three">
+              RULE 1: hold the chicken. RULE 2: hold my drink. RULE 3: wait wich one was the token
+              <small>4:08 AM</small>
+            </div>
+            <div className="drunk-message msg-four">
+              if chart go up: genius. if chart go down: chicken is just bending knees for a HUGE
+              jump. this is sicence
+              <small>4:09 AM</small>
+            </div>
+            <div className="drunk-message msg-five">
+              we dont leave holders at the bar. we cluck together. we drunkmaxx together. we wake
+              up and check wallet with one eye together
+              <small>4:11 AM</small>
+            </div>
+            <p className="manifesto-signoff">
+              ok goodnite see u at the top or in the group chat asking what happend. luv, chicken
+              xoxo
+            </p>
+            <strong className="manifesto-stamp">GET RIHCH OR GET ANOTHR ROUND</strong>
+          </div>
+        </div>
+        <p className="manifesto-footnote">
+          *napkin math is not financal advice. the napkin has not been located.
+        </p>
       </section>
 
       <section className="final-cta" aria-label="Visit DRUNKCHICKEN on Pons Family">
