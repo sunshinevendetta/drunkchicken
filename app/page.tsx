@@ -209,19 +209,16 @@ export default function Home() {
 
         <div className="lore-grid">
           <article className="ugly-card card-yellow">
-            <span className="card-icon" aria-hidden="true">🐣</span>
-            <h3>THE BEST BAD DECISION</h3>
-            <p>Buying one drunk chicken and getting rich. 🍗💸</p>
+            <h3>THE PLAN??? 🐣</h3>
+            <p>Get drunk while the chicken moons. We get richer. Try to keep up. 🍻🌕</p>
           </article>
           <article className="ugly-card card-pink">
-            <span className="card-icon" aria-hidden="true">🍻</span>
-            <h3>THE VIBE_final</h3>
-            <p>Late-night cable TV, warm beer, dial-up noises and one heroic bird.</p>
+            <h3>THE IDEA 🐔</h3>
+            <p>One drunk chicken you bought while drunk, outperforming your entire portfolio. 🐔📈</p>
           </article>
           <article className="ugly-card card-cyan">
-            <span className="card-icon" aria-hidden="true">📡</span>
-            <h3>THE SIGNAL_v2</h3>
-            <p>Broadcasting live from the Pons Family launchpad to every cursed guestbook.</p>
+            <h3>THE BEST BAD DECISION 🍻</h3>
+            <p>Buying one drunk chicken and getting rich. 🍗💸</p>
           </article>
         </div>
       </section>
